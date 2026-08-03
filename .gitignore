@@ -1,0 +1,32 @@
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info
+*.tfvars
+*.tfvars.json
+
+# Keep example variables
+!*.tfvars.example
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+
+# AWS / credentials — should never be here anyway, but belt and suspenders
+.aws/
+*.pem
+*.key
+
+# Kubeconfig
+kubeconfig
+*.kubeconfig
+
+# Local env files
+.env
+.env.*
+
+# OS/editor noise
+.DS_Store
+.vscode/

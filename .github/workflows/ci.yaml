@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    # paths:
+    #   - "apps/sample-api/**"
+  pull_request:
+    branches: [main]
+  # workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::601644128235:role/github-actions-ecr-push
+          aws-region: eu-central-1
+
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        working-directory: apps/sample-api
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          ECR_REPOSITORY: sample-api
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Update Kubernetes manifest with new image tag
+        run: |
+          sed -i "s|image:.*sample-api:.*|image: ${{ steps.ecr-login.outputs.registry }}/sample-api:${{ github.sha }}|g" \
+            apps/sample-api/k8s/deployment.yaml
+
+      - name: Commit updated manifest
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add apps/sample-api/k8s/deployment.yaml
+          git commit -m "ci: update sample-api image to ${{ github.sha }}" || echo "No changes to commit"
+          git push
+        # This commit-back-to-Git step IS the GitOps handoff: CI builds and
+        # pushes the image, then updates Git — ArgoCD picks up the change
+        # from there and reconciles the cluster. CI never touches the
+        # cluster directly.

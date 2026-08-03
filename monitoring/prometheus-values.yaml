@@ -1,0 +1,54 @@
+# Values file for the kube-prometheus-stack Helm chart.
+#
+# Install with:
+#   helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+#   helm install monitoring prometheus-community/kube-prometheus-stack \
+#     -n monitoring --create-namespace -f monitoring/prometheus-values.yaml
+#
+# This is intentionally installed via Helm directly (not Terraform) — same
+# reasoning as ArgoCD: cluster infra via Terraform, cluster workloads via
+# their native tooling. Be ready to explain that separation in interviews;
+# it's a deliberate design choice, not an inconsistency.
+
+grafana:
+  enabled: true
+  # DO NOT put a real password here — this file is committed to a public repo.
+  # Instead, create the admin password as a Kubernetes Secret BEFORE installing
+  # the Helm chart, then reference it below:
+  #
+  #   kubectl create namespace monitoring
+  #   kubectl create secret generic grafana-admin-credentials \
+  #     --namespace monitoring \
+  #     --from-literal=admin-user=admin \
+  #     --from-literal=admin-password="$(openssl rand -base64 20)"
+  #
+  admin:
+    existingSecret: "grafana-admin-credentials"
+    userKey: admin-user
+    passwordKey: admin-password
+  service:
+    type: ClusterIP
+
+prometheus:
+  prometheusSpec:
+    retention: 3d # short retention — this is a demo cluster, not production
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+
+    # Auto-discover ServiceMonitors from any namespace — lets sample-api's
+    # /metrics endpoint get scraped without extra Prometheus config changes.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+
+alertmanager:
+  enabled: true
+  config:
+    route:
+      receiver: "null" # wire this up to Slack/email/PagerDuty for a fuller demo
+    receivers:
+      - name: "null"

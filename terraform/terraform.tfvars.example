@@ -1,0 +1,8 @@
+# Copy this file to terraform.tfvars and fill in your own values.
+# terraform.tfvars is gitignored — it will never be committed.
+#
+#   cp terraform.tfvars.example terraform.tfvars
+
+aws_region          = "eu-central-1"
+project_name        = "gitops-portfolio"
+node_instance_type  = "t3.micro"

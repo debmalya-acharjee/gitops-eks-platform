@@ -1,0 +1,24 @@
+# Requires the AWS Load Balancer Controller installed on the cluster.
+# (Worth installing via Helm as a documented manual step — mention this in
+# your README as a known prerequisite, since it's outside this repo's scope.)
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sample-api-ingress
+  namespace: sample-api
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sample-api
+                port:
+                  number: 80
